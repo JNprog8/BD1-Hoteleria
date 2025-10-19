@@ -1,8 +1,6 @@
-CREATE DATABASE  IF NOT EXISTS `hotelero` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
-USE `hotelero`;
--- MySQL dump 10.13  Distrib 8.0.36, for Linux (x86_64)
+-- MySQL dump 10.13  Distrib 8.0.43, for Linux (x86_64)
 --
--- Host: 127.0.0.1    Database: hotelero
+-- Host: 127.0.0.1    Database: hotelerov3
 -- ------------------------------------------------------
 -- Server version	8.0.43-0ubuntu0.24.04.2
 
@@ -27,15 +25,15 @@ DROP TABLE IF EXISTS `Cliente`;
 CREATE TABLE `Cliente` (
   `idCliente` int NOT NULL AUTO_INCREMENT,
   `DNI` varchar(10) NOT NULL,
-  `Nombre` varchar(45) NOT NULL,
-  `Apellido` varchar(45) NOT NULL,
-  `domCiudad` varchar(45) DEFAULT NULL,
-  `domCalle` varchar(45) DEFAULT NULL,
-  `domNum` varchar(45) DEFAULT NULL,
-  `telefono` varchar(15) DEFAULT NULL,
+  `apellido` varchar(100) NOT NULL,
+  `nombre` varchar(100) NOT NULL,
+  `domCiudad` varchar(100) DEFAULT NULL,
+  `domCalle` varchar(100) DEFAULT NULL,
+  `domNum` int DEFAULT NULL,
+  `telefono` varchar(30) DEFAULT NULL,
   PRIMARY KEY (`idCliente`),
-  UNIQUE KEY `idCliente_UNIQUE` (`idCliente`),
-  UNIQUE KEY `DNI_UNIQUE` (`DNI`)
+  UNIQUE KEY `DNI` (`DNI`),
+  CONSTRAINT `chk_cliente_dni_not_empty` CHECK ((`DNI` <> _utf8mb4''))
 ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -48,15 +46,17 @@ DROP TABLE IF EXISTS `Factura`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `Factura` (
   `idFactura` int NOT NULL AUTO_INCREMENT,
-  `numero` varchar(16) NOT NULL,
+  `numero` varchar(30) NOT NULL,
   `idReserva` int NOT NULL,
-  `formaPago` varchar(15) DEFAULT NULL,
+  `formaPago` enum('Efectivo','Tarjeta','Otro') NOT NULL,
+  `totalFacturado` decimal(12,2) NOT NULL,
+  `fechaFactura` date NOT NULL DEFAULT (curdate()),
   PRIMARY KEY (`idFactura`),
-  UNIQUE KEY `idFactura_UNIQUE` (`idFactura`),
-  UNIQUE KEY `numero_UNIQUE` (`numero`),
-  KEY `fk_Factura_1_idx` (`idReserva`),
-  CONSTRAINT `fk_Factura_1` FOREIGN KEY (`idReserva`) REFERENCES `Reserva` (`idReserva`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  UNIQUE KEY `numero` (`numero`),
+  UNIQUE KEY `idReserva` (`idReserva`),
+  CONSTRAINT `fk_fact_res` FOREIGN KEY (`idReserva`) REFERENCES `Reserva` (`idReserva`),
+  CONSTRAINT `chk_factura_total` CHECK ((`totalFacturado` >= 0))
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -68,19 +68,17 @@ DROP TABLE IF EXISTS `Habitacion`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `Habitacion` (
   `idHabitacion` int NOT NULL AUTO_INCREMENT,
-  `numero` int NOT NULL,
-  `superficie` int NOT NULL,
-  `terraza` tinyint(1) NOT NULL,
-  `limpia` tinyint(1) NOT NULL,
-  `ocupada` tinyint(1) NOT NULL,
+  `numero` varchar(10) NOT NULL,
+  `superficie` int DEFAULT NULL,
+  `terraza` tinyint(1) NOT NULL DEFAULT '0',
+  `limpia` tinyint(1) NOT NULL DEFAULT '1',
+  `libre` tinyint(1) NOT NULL DEFAULT '1',
   `idTipoHabitacion` int NOT NULL,
   PRIMARY KEY (`idHabitacion`),
-  UNIQUE KEY `idHabitacion_UNIQUE` (`idHabitacion`),
-  UNIQUE KEY `numero_UNIQUE` (`numero`),
-  KEY `fk_Habitacion_1_idx` (`idTipoHabitacion`),
-  CONSTRAINT `fk_Habitacion_1` FOREIGN KEY (`idTipoHabitacion`) REFERENCES `TipoHabitacion` (`idTipoHabitacion`),
-  CONSTRAINT `Habitacion_chk_1` CHECK ((`superficie` > 0))
-) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  UNIQUE KEY `numero` (`numero`),
+  KEY `fk_hab_tipohab` (`idTipoHabitacion`),
+  CONSTRAINT `fk_hab_tipohab` FOREIGN KEY (`idTipoHabitacion`) REFERENCES `TipoHabitacion` (`idTipoHabitacion`)
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -92,15 +90,15 @@ DROP TABLE IF EXISTS `Pago`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `Pago` (
   `idPago` int NOT NULL AUTO_INCREMENT,
-  `fechaHora` datetime NOT NULL,
+  `fechaHora` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `idReserva` int NOT NULL,
-  `monto` float NOT NULL,
-  `tipo` varchar(6) NOT NULL,
+  `monto` decimal(10,2) NOT NULL,
+  `tipo` enum('Seña','Parcial','Total') NOT NULL,
   PRIMARY KEY (`idPago`),
-  UNIQUE KEY `idPago_UNIQUE` (`idPago`),
-  KEY `fk_Pago_1_idx` (`idReserva`),
-  CONSTRAINT `fk_Pago_1` FOREIGN KEY (`idReserva`) REFERENCES `Reserva` (`idReserva`)
-) ENGINE=InnoDB AUTO_INCREMENT=97 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  KEY `fk_pago_res` (`idReserva`),
+  CONSTRAINT `fk_pago_res` FOREIGN KEY (`idReserva`) REFERENCES `Reserva` (`idReserva`),
+  CONSTRAINT `chk_pago_monto` CHECK ((`monto` > 0))
+) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -112,21 +110,22 @@ DROP TABLE IF EXISTS `Reserva`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `Reserva` (
   `idReserva` int NOT NULL AUTO_INCREMENT,
-  `idCliente` int NOT NULL,
-  `idHabitacion` int NOT NULL,
-  `estado` varchar(15) NOT NULL,
+  `fechaReserva` date NOT NULL,
+  `estado` enum('pendiente','confirmada','cancelada','ocupada','finalizada') NOT NULL DEFAULT 'pendiente',
   `cantidadPasajeros` int NOT NULL,
   `fechaEntrada` date NOT NULL,
   `noches` int NOT NULL,
-  `telefono` varchar(15) NOT NULL,
-  `fechaReserva` date DEFAULT NULL,
+  `telefono` varchar(30) NOT NULL,
+  `idHabitacion` int NOT NULL,
+  `idCliente` int NOT NULL,
   PRIMARY KEY (`idReserva`),
-  UNIQUE KEY `idReserva_UNIQUE` (`idReserva`),
-  KEY `fk_Reserva_1_idx` (`idCliente`),
-  KEY `fk_Reserva_2_idx` (`idHabitacion`),
-  CONSTRAINT `fk_Reserva_1` FOREIGN KEY (`idCliente`) REFERENCES `Cliente` (`idCliente`),
-  CONSTRAINT `fk_Reserva_2` FOREIGN KEY (`idHabitacion`) REFERENCES `Habitacion` (`idHabitacion`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  KEY `ix_fec` (`idHabitacion`,`fechaEntrada`),
+  KEY `ix_cli` (`idCliente`),
+  CONSTRAINT `fk_res_cli` FOREIGN KEY (`idCliente`) REFERENCES `Cliente` (`idCliente`),
+  CONSTRAINT `fk_res_hab` FOREIGN KEY (`idHabitacion`) REFERENCES `Habitacion` (`idHabitacion`),
+  CONSTRAINT `chk_reserva_noches` CHECK ((`noches` > 0)),
+  CONSTRAINT `chk_reserva_pasajeros` CHECK ((`cantidadPasajeros` > 0))
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -138,12 +137,11 @@ DROP TABLE IF EXISTS `Servicio`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `Servicio` (
   `idServicio` int NOT NULL AUTO_INCREMENT,
-  `codigoUnico` varchar(30) NOT NULL,
-  `descripcion` varchar(45) NOT NULL,
+  `codigoUnico` varchar(20) NOT NULL,
+  `descripcion` varchar(100) NOT NULL,
   PRIMARY KEY (`idServicio`),
-  UNIQUE KEY `idServicio_UNIQUE` (`idServicio`),
-  UNIQUE KEY `codigoUnico_UNIQUE` (`codigoUnico`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  UNIQUE KEY `codigoUnico` (`codigoUnico`)
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -158,15 +156,17 @@ CREATE TABLE `ServicioReserva` (
   `idServicio` int NOT NULL,
   `idReserva` int NOT NULL,
   `fecha` datetime NOT NULL,
-  `cantidad` int NOT NULL,
-  `importe` float NOT NULL,
+  `cantidad` int NOT NULL DEFAULT '1',
+  `importe` decimal(10,2) NOT NULL,
   PRIMARY KEY (`idServicioReserva`),
-  UNIQUE KEY `idServicioReserva_UNIQUE` (`idServicioReserva`),
-  KEY `fk_ServicioReserva_1_idx` (`idReserva`),
-  KEY `fk_ServicioReserva_2_idx` (`idServicio`),
-  CONSTRAINT `fk_ServicioReserva_1` FOREIGN KEY (`idReserva`) REFERENCES `Reserva` (`idReserva`),
-  CONSTRAINT `fk_ServicioReserva_2` FOREIGN KEY (`idServicio`) REFERENCES `Servicio` (`idServicio`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  UNIQUE KEY `uq_srvres` (`idReserva`,`idServicio`,`fecha`),
+  KEY `ix_res` (`idReserva`),
+  KEY `ix_srv` (`idServicio`),
+  CONSTRAINT `fk_srvres_res` FOREIGN KEY (`idReserva`) REFERENCES `Reserva` (`idReserva`),
+  CONSTRAINT `fk_srvres_srv` FOREIGN KEY (`idServicio`) REFERENCES `Servicio` (`idServicio`),
+  CONSTRAINT `chk_srvres_cantidad` CHECK ((`cantidad` > 0)),
+  CONSTRAINT `chk_srvres_importe` CHECK ((`importe` >= 0))
+) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -178,11 +178,12 @@ DROP TABLE IF EXISTS `TipoHabitacion`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `TipoHabitacion` (
   `idTipoHabitacion` int NOT NULL AUTO_INCREMENT,
-  `nombre` varchar(45) NOT NULL,
+  `nombre` varchar(50) NOT NULL,
   `capacidad` int NOT NULL,
   PRIMARY KEY (`idTipoHabitacion`),
-  UNIQUE KEY `idTipoHabitacion_UNIQUE` (`idTipoHabitacion`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  UNIQUE KEY `nombre` (`nombre`),
+  CONSTRAINT `chk_tipohab_capacidad` CHECK ((`capacidad` > 0))
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -194,15 +195,14 @@ DROP TABLE IF EXISTS `Valorizacion`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `Valorizacion` (
   `idValorizacion` int NOT NULL AUTO_INCREMENT,
-  `fecha` date NOT NULL,
+  `fechaDesde` date NOT NULL,
   `idTipoHabitacion` int NOT NULL,
-  `precio` float NOT NULL,
+  `precio` decimal(10,2) NOT NULL,
   PRIMARY KEY (`idValorizacion`),
-  UNIQUE KEY `idValorizacion_UNIQUE` (`idValorizacion`),
-  UNIQUE KEY `uq_valorizacion_tipo_fecha` (`idTipoHabitacion`,`fecha`),
-  KEY `fk_Valorizacion_1_idx` (`idTipoHabitacion`),
-  CONSTRAINT `fk_Valorizacion_1` FOREIGN KEY (`idTipoHabitacion`) REFERENCES `TipoHabitacion` (`idTipoHabitacion`)
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  UNIQUE KEY `uq_valorizacion_tipo_fecha` (`idTipoHabitacion`,`fechaDesde`),
+  CONSTRAINT `fk_val_tipohab` FOREIGN KEY (`idTipoHabitacion`) REFERENCES `TipoHabitacion` (`idTipoHabitacion`),
+  CONSTRAINT `chk_valorizacion_precio` CHECK ((`precio` > 0))
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -214,4 +214,4 @@ CREATE TABLE `Valorizacion` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-10-15 11:41:25
+-- Dump completed on 2025-10-18 21:44:38
